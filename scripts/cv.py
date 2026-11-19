@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Executa a variante original de embeddings em uma área de trabalho privada."""
+"""Adapta currículos a vagas em uma área de trabalho privada."""
 
 import argparse
 import fcntl

@@ -1,82 +1,88 @@
 # ATS-Proof CV
 
-[Read the guide in English](README.en.md)
+[Leia este guia em português](README.pt-BR.md)
 
-Adapte o currículo a cada vaga usando as experiências que você já registrou. A vaga orienta o que buscar no histórico e o que destacar no resumo. O currículo vem acompanhado dos registros que permitem conferir quais experiências sustentam cada requisito e onde ainda falta evidência.
+ATS-Proof CV tailors résumés with **local vector search over your career history**, followed by evidence scoring and a separate review before PDF export.
 
-## O que acontece em uma candidatura
+## Vector search and evidence selection
 
-Imagine uma vaga que pede **entrevistar clientes e transformar os achados em prioridades de produto**. Na base de exemplo, um relato comprova as entrevistas e outro mostra como a pesquisa orientou a priorização. A skill consegue considerar os dois juntos. A mesma base tem duas versões do relato sobre ativação de **41% para 53%**. A seleção identifica a realização em comum, preserva a fonte mais completa entre as elegíveis e evita gastar espaço repetindo o resultado. Se a vaga também pedir testes A/B, o registro de cobertura indica a lacuna. [Vaga fictícia](examples/vaga.txt) · [Base fictícia](examples/carreira.json)
+Each job requirement becomes a query. The skill generates embeddings with `text-embedding-3-large`, stores the career vectors in SQLite, and computes cosine similarity locally. A lexical search weighted by term rarity complements the vector ranking. The combined results form the candidate set for scoring.
 
-1. **Busca por requisito.** A skill procura experiências por significado e por palavras específicas. A busca encontra candidatas e distingue a fonte principal das versões que podem trazer detalhes.
-2. **Seleção por evidência.** Luna pontua os textos originais. A seleção protege as melhores evidências para cada requisito. Na escolha dos complementos, verifica se o relato acrescenta fatos e considera a relevância, a diversidade e o detalhe quantitativo. A revisão distingue apoio direto, parcial, transferível e ausente. Alterações propostas na seleção precisam preservar as notas e a melhor cobertura já alcançada.
-3. **Revisão antes do PDF.** A vaga define o foco do resumo e a ordem de destaque das experiências. Uma segunda leitura verifica se o texto comunica esse foco e se os requisitos centrais estão ligados às fontes certas. O fluxo confere IDs, métricas e repetições e corrige os trechos afetados antes de montar o documento. Acréscimos de contexto ou responsabilidade ficam registrados para revisão factual humana.
+`gpt-6-luna` scores each retrieved account against the requirements on a 1–5 scale. The selector groups accounts of the same accomplishment within a role, prioritizes the strongest evidence for each requirement, and uses maximal marginal relevance (MMR) to choose complementary accounts. It rewards new facts and useful quantitative details and penalizes redundancy. A compound requirement can draw on several sources. The selection review records direct, partial, transferable, and missing evidence. Any changes must preserve the highest eligible score already covered for each requirement.
 
-Esta edição reaproveita os módulos de recuperação, seleção e revisão do fluxo original. O cadastro, a configuração dos vínculos e o template foram preparados para uso com o histórico de qualquer candidato. Por padrão, todos os empregadores partem da mesma prioridade. As notas, os critérios de cobertura e os pesos de seleção vêm do fluxo original.
+## Review before PDF export
 
-## Instalação
+A separate model call checks whether the summary and bullet order reflect the role’s main responsibilities. The workflow checks that the figures from the selected sources are preserved and applies corrections only to the passages flagged for revision. It records added context or responsibilities for human factual review.
 
-1. Baixe ou clone este repositório e abra a pasta `ats-proof-cv`. Para clonar pelo terminal, use `git clone https://github.com/alexsilvacw-bot/ats-proof-cv.git`.
-2. Use Python 3.10 ou superior e LibreOffice no macOS ou Linux. Disponibilize `soffice` ou `libreoffice` no terminal. No Windows, use um ambiente Linux como WSL com as dependências instaladas nele.
-3. Na pasta da skill, execute `python -m pip install -r requirements.txt` no seu ambiente Python. Se o seu sistema usa `python3`, substitua `python` nos comandos.
-4. Configure `OPENAI_API_KEY` no ambiente que executará o script. A chave precisa ter acesso a `gpt-6.1-sol` para extração, `gpt-6-luna` para pontuação, revisão e redação, e `text-embedding-3-large` para os vetores. As chamadas são cobradas conforme o uso. [Autenticação da API](https://developers.openai.com/api/reference/overview#authentication)
-5. Para usar pelo Codex, copie a pasta da skill para `.agents/skills/` no seu projeto e invoque `$ats-proof-cv`. Para usar pelo terminal, execute os comandos abaixo a partir da pasta da skill. [Skills no Codex](https://developers.openai.com/codex/skills)
+## API cost
 
-## Cadastrar e indexar suas experiências
+**Running the skill requires paid use of the OpenAI API. The measured cost in Brazil was BRL 0.20 per résumé.** The total in Brazilian reais varies with token usage and the exchange rate. [OpenAI API pricing](https://developers.openai.com/api/docs/pricing)
 
-- **No Codex.** Anexe seu currículo ou cole suas realizações e envie este pedido. «Use `$ats-proof-cv` para cadastrar minhas experiências em `dados/carreira.json`. Preserve os cargos, as datas e as métricas que forneci. Mostre a base para eu revisar antes de indexar.»
-- **Manualmente.** Copie [a base fictícia](examples/carreira.json) para `dados/carreira.json` e preencha com os seus dados. O campo `contato` é opcional. Use um vínculo por combinação de empresa, cargo e período. Dentro de `experiencia`, inclua um item por relato. Mantenha os IDs de vínculos e relatos estáveis e distintos.
+## Install
 
-| Campo | Como preencher |
+1. Download or clone this repository and open the `ats-proof-cv` folder. To clone from the terminal, run `git clone https://github.com/alexsilvacw-bot/ats-proof-cv.git`.
+2. Use Python 3.10 or later and LibreOffice on macOS or Linux. Make `soffice` or `libreoffice` available on your command path. On Windows, use a Linux environment such as WSL and install the dependencies there.
+3. From the skill folder, run `python -m pip install -r requirements.txt` in your Python environment. If your system uses `python3`, substitute it for `python` in the examples.
+4. Set `OPENAI_API_KEY` in the environment that runs the script. Your key needs access to `gpt-6.1-sol` for extraction, `gpt-6-luna` for scoring, drafting, and review, and `text-embedding-3-large` for vectors. [API authentication](https://developers.openai.com/api/reference/overview#authentication)
+5. For Codex, copy the skill folder into `.agents/skills/` in your project and invoke `$ats-proof-cv`. For the terminal, run the commands below from the skill folder. [Codex skills](https://developers.openai.com/codex/skills)
+
+## Add and index your experience
+
+- **With Codex.** Attach your résumé or paste your accomplishments and send this request. “Use `$ats-proof-cv` to record my experience in `dados/carreira.json`. Keep the job titles, dates, and metrics I provided. Show me the career file for review before indexing.”
+- **By hand.** Copy [the fictional career file](examples/carreira.json) to `dados/carreira.json` and replace the sample data with yours. The field `contato` is optional. Create one role for each employer, job title, and period. Add each account of work as a separate record in `experiencia`. Keep role and experience IDs stable and distinct.
+
+The JSON field names and terminal flags below match the script. Your experience descriptions can be written in your own language.
+
+| Field | What to enter |
 | --- | --- |
-| `experiencias` | Lista de vínculos. Cada vínculo tem `id`, `empresa`, `cargo`, `periodo` e a lista `experiencia` |
-| `periodo` | Use `AAAA-MM` para `entrada` e `saida`. Use `null` para mês desconhecido. Em um vínculo atual, marque `atual` como `true` e deixe a saída como `null` |
-| `experiencia` | Cada relato tem `id` e `texto`. Descreva a ação, o contexto e o resultado, se conhecido. Preserve as unidades e os qualificadores dos números |
+| `nome` | Your name, as it should appear in the document header |
+| `contato` | Optional contact details |
+| `experiencias` | The list of roles. Each role has `id`, `empresa` (employer), `cargo` (job title), `periodo` (dates), and the `experiencia` list |
+| `periodo` | Use `YYYY-MM` for `entrada` (start) and `saida` (end). Use `null` for an unknown month. For a current role, set `atual` to `true` and leave `saida` as `null` |
+| `experiencia` | Each account has an `id` and `texto`. Describe what you did, the context, and the result if known. Preserve units and qualifiers for numeric claims |
 
-Revise o JSON e prepare a base. Guarde a base e os resultados na sua área de trabalho privada.
+Review the JSON, then prepare the career file. Keep your data and generated documents in your private workspace.
 
 ```bash
 python scripts/cv.py index --base dados/carreira.json
 ```
 
-Na preparação, a API da OpenAI recebe os relatos para organizar as realizações e criar os vetores. O índice e os dados operacionais ficam em `.ats-proof-cv/`. Ao acrescentar uma experiência, crie um novo ID. Ao corrigir um relato, mantenha seu ID. Execute `index` novamente após editar o arquivo. Os vetores de textos idênticos com o mesmo ID são reutilizados, e a organização das realizações é atualizada para a versão da base. Use `--workspace` com o mesmo caminho nos comandos se preferir outra pasta.
+Indexing sends your experience descriptions to OpenAI to group accounts of the same work and create vectors. The index and working files are stored in `.ats-proof-cv/`. Give each new experience a new ID. When editing an existing experience, keep its ID. Run `index` again after editing the file. Vectors for unchanged text with the same ID are reused, and the grouping is updated to match the current career file. To use another folder, pass the same `--workspace` path to each command.
 
-## Criar e retomar uma candidatura
+## Create and resume an application
 
-Forneça o anúncio em TXT UTF-8 ou passe a URL pública com `--url`.
+Save the job ad in a UTF-8 text file or pass the public job URL with `--url`.
 
 ```bash
 python scripts/cv.py create --vaga dados/vaga.txt
 ```
 
-O caminho da candidatura aparece no terminal. Para retomar uma execução interrompida, passe esse mesmo caminho. O fluxo retoma a etapa pendente e pode reaproveitar respostas compatíveis do checkpoint temporário.
+The terminal prints the application folder. After an interruption, pass that same path. The workflow continues from the pending step and can reuse compatible responses from the temporary checkpoint.
 
 ```bash
-python scripts/cv.py resume --candidatura .ats-proof-cv/candidaturas/empresa_cargo
+python scripts/cv.py resume --candidatura .ats-proof-cv/candidaturas/company_role
 ```
 
-A seleção normalmente trabalha com um recorte da base. Se a busca já retornar todos os textos de uma base pequena, `--permitir-base-integral` autoriza a avaliação desse conjunto. Use a opção de forma explícita, pois nesse caso todos os relatos recuperados podem ser enviados à API para pontuação.
+Selection usually works from a subset of the career file. If retrieval returns every record in a small file, `--permitir-base-integral` authorizes scoring that set. In this case, the API can receive all retrieved descriptions for scoring.
 
-### Testar com os dados fictícios
+### Try the fictional data
 
-Os dois comandos fazem chamadas à API e usam uma área de trabalho própria para o exemplo.
+Both commands make API calls and use a separate workspace for the example.
 
 ```bash
 python scripts/cv.py index --base examples/carreira.json --workspace dados/demo
 python scripts/cv.py create --vaga examples/vaga.txt --workspace dados/demo --permitir-base-integral
 ```
 
-## Conferir o resultado
+## Review the result
 
-O fluxo gera o PDF em português ou inglês, conforme a vaga. O DOCX é o intermediário usado para a conversão. Os JSONs na pasta da candidatura registram o percurso.
+The workflow produces a Portuguese or English PDF based on the vacancy. The DOCX is the intermediate file used for conversion. The application folder also contains these JSON records.
 
-- `requisitos-vaga.json` contém os requisitos extraídos e suas prioridades.
-- `experiencias-aprovadas.json` contém a seleção e o mapa de cobertura por componente. O nome do arquivo identifica a seleção do processo. A aprovação factual é humana.
-- `dados-reescritos.json` contém a redação, o parecer de alinhamento e os acréscimos pendentes de revisão.
-- `origens-recuperacao.json` mostra de onde vieram as experiências recuperadas.
+- `requisitos-vaga.json` contains the extracted requirements and their priorities.
+- `experiencias-aprovadas.json` records the selected experiences and coverage by component. Its name refers to the selection step. Factual approval comes from the user.
+- `dados-reescritos.json` contains the draft, the alignment review, and additions awaiting factual review.
+- `origens-recuperacao.json` records where the retrieved experiences came from.
 
-Abra o PDF e revise o conteúdo com os JSONs, especialmente as métricas, a atribuição dos resultados e os acréscimos pendentes. As listas de habilidades e ferramentas vêm da extração do anúncio e também precisam de conferência. A conversão e a validação de texto do PDF são locais. Durante a candidatura, o anúncio, os requisitos e as evidências pertinentes são enviados à OpenAI para as etapas de extração, embeddings, contagem de entrada, avaliação e redação. Nome e contato do cabeçalho são preenchidos localmente.
+Open the PDF and compare it with the JSON records, paying particular attention to metrics, attribution, and pending additions. The skills and tools lists come from the job ad and also need factual review. PDF conversion and text extraction checks run locally. During an application, OpenAI receives the job description, requirements, and relevant evidence for extraction, embeddings, input token counting, scoring, and drafting. The name and contact details in the document header are filled in locally.
 
-[Instruções operacionais da skill](SKILL.md)
-
-[Licença MIT da edição pública](LICENSE)
+[Operational skill instructions](SKILL.md) · [MIT license for the public edition](LICENSE)
